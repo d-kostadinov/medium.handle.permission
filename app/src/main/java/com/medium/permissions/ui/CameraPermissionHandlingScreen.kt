@@ -31,34 +31,43 @@ fun CameraPermissionHandlingScreen(navController: NavHostController) {
     val cameraPermissionState = rememberPermissionState(permission = Manifest.permission.CAMERA)
     val context = LocalContext.current
 
-    // State to track if the permission request has been processed
+    // Track if the permission request has been processed after user interaction
     var hasRequestedPermission by rememberSaveable { mutableStateOf(false) }
+    var permissionRequestCompleted by rememberSaveable { mutableStateOf(false) }
+
+    LaunchedEffect(cameraPermissionState.status) {
+        // Check if the permission state has changed after the request
+        if (hasRequestedPermission) {
+            permissionRequestCompleted = true
+        }
+    }
 
     Column(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp)
     ) {
-        // Only display the permission status if the permission has been requested and processed
         when (val status = cameraPermissionState.status) {
             is PermissionStatus.Granted -> {
+                // Permission granted, show success message
                 Text("Camera permission granted. You can now use the camera.")
                 Button(onClick = { navController.popBackStack() }, Modifier.padding(top = 16.dp)) {
                     Text("Go Back")
                 }
             }
             is PermissionStatus.Denied -> {
-                // Show rationale only after the user interacts with the permission dialog
-                if (hasRequestedPermission) {
+                if (permissionRequestCompleted) {
+                    // Show rationale only after the permission request is completed
                     if (status.shouldShowRationale) {
                         Text("Camera permission is required to use this feature.")
                         Button(onClick = {
                             cameraPermissionState.launchPermissionRequest()
+                            hasRequestedPermission = true
                         }) {
                             Text("Request Camera Permission")
                         }
                     } else {
-                        // Only show the "Denied" message after the permission has been requested and denied
+                        // Show "Denied" message only after the user has denied permission
                         Text("Camera permission denied. Please enable it in the app settings to proceed.")
                         Button(onClick = {
                             // Open app settings to manually enable the permission
@@ -71,9 +80,7 @@ fun CameraPermissionHandlingScreen(navController: NavHostController) {
                         }
                     }
                 } else {
-                    Text("Camera permission is required to use this feature.")
-
-                    // Display the initial request button
+                    // Show the initial request button
                     Button(onClick = {
                         cameraPermissionState.launchPermissionRequest()
                         hasRequestedPermission = true
@@ -85,3 +92,6 @@ fun CameraPermissionHandlingScreen(navController: NavHostController) {
         }
     }
 }
+
+
+

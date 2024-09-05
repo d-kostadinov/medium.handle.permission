@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,17 +34,32 @@ fun CameraAndLocationPermissionsHandlingScreen(navController: NavHostController)
     )
     val context = LocalContext.current
 
+    // State to track if the permission request has been processed
     var hasRequestedPermissions by rememberSaveable { mutableStateOf(false) }
+    var permissionRequestCompleted by rememberSaveable { mutableStateOf(false) }
 
-    Column(modifier = Modifier.fillMaxSize().padding(16.dp)) {
+    // Update permissionRequestCompleted only after the user interacts with the permission dialog
+    LaunchedEffect(permissionsState.revokedPermissions) {
+        if (hasRequestedPermissions) {
+            permissionRequestCompleted = true
+        }
+    }
+
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(16.dp)
+    ) {
         when {
             permissionsState.allPermissionsGranted -> {
+                // If all permissions are granted, show success message
                 Text("All permissions granted. You can now access the camera and location.")
                 Button(onClick = { navController.popBackStack() }, Modifier.padding(top = 16.dp)) {
                     Text("Go Back")
                 }
             }
             permissionsState.shouldShowRationale -> {
+                // Show rationale if needed and give an option to request permissions
                 Text("Camera and Location permissions are required to use this feature.")
                 Button(onClick = {
                     permissionsState.launchMultiplePermissionRequest()
@@ -52,8 +68,8 @@ fun CameraAndLocationPermissionsHandlingScreen(navController: NavHostController)
                 }
             }
             else -> {
-                // Only show the "Permissions denied" message after the user has interacted
-                if (hasRequestedPermissions) {
+                if (permissionRequestCompleted) {
+                    // Show permission denied message only after interaction
                     Text("Permissions denied. Please enable them in the app settings to proceed.")
                     Button(onClick = {
                         val intent = Intent(Settings.ACTION_APPLICATION_DETAILS_SETTINGS).apply {
@@ -64,6 +80,7 @@ fun CameraAndLocationPermissionsHandlingScreen(navController: NavHostController)
                         Text("Open App Settings")
                     }
                 } else {
+                    // Display the initial request button
                     Text("Camera and Location permissions are required to use this feature.")
                     Button(onClick = {
                         permissionsState.launchMultiplePermissionRequest()
